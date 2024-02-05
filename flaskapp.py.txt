@@ -1,0 +1,68 @@
+from flask import Flask, render_template, request, redirect, url_for
+import sqlite3
+import os
+
+app = Flask(__name__)
+
+# SQLite database configuration
+DB_NAME = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'flaskapp', 'users.db')
+
+def create_db():
+    conn = sqlite3.connect('users.db')
+    c = conn.cursor()
+    c.execute('''CREATE TABLE IF NOT EXISTS users
+                 (id INTEGER PRIMARY KEY, username TEXT, password TEXT, first_name TEXT, last_name TEXT, email TEXT)''')
+    conn.commit()
+    conn.close()
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/register', methods=['POST'])
+def register():
+    username = request.form['username']
+        password = request.form['password']
+    conn = sqlite3.connect('users.db')
+    c = conn.cursor()
+    c.execute("INSERT INTO users (username, password) VALUES (?, ?)", (username, password))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('details'))
+
+@app.route('/details')
+def details():
+    return render_template('details.html')
+
+@app.route('/details', methods=['POST'])
+def save_details():
+    first_name = request.form['first_name']
+    last_name = request.form['last_name']
+    email = request.form['email']
+    conn = sqlite3.connect('users.db')
+    c = conn.cursor()
+    c.execute("UPDATE users SET first_name=?, last_name=?, email=? WHERE id=1", (first_name, last_name, email))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('login'))
+    @app.route('/login')
+def login():
+    return render_template('login.html')
+
+@app.route('/login', methods=['POST'])
+def authenticate():
+    username = request.form['username']
+    password = request.form['password']
+    conn = sqlite3.connect('users.db')
+    c = conn.cursor()
+    c.execute("SELECT * FROM users WHERE username=? AND password=?", (username, password))
+    user = c.fetchone()
+    conn.close()
+    if user:
+        return f"Welcome, {user[3]} {user[4]} ({user[5]})"
+    else:
+        return "Invalid credentials"
+
+if __name__ == '__main__':
+    create_db()
+    app.run(debug=True)
